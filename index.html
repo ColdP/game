@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多彩连连看 - 变体玩法升级版</title>
+    <!-- 引入 Material Symbols Rounded 和 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,700,1,0" rel="stylesheet">
+    <style>
+        :root {
+            /* Material 3 Expressive 调色板 */
+            --md-sys-color-primary: #A2007D;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #FFD7ED;
+            --md-sys-color-on-primary-container: #370029;
+            
+            --md-sys-color-secondary: #006874;
+            --md-sys-color-on-secondary: #FFFFFF;
+            --md-sys-color-secondary-container: #97F0FF;
+            --md-sys-color-on-secondary-container: #001F24;
+
+            --md-sys-color-tertiary: #6B4EA0;
+            --md-sys-color-on-tertiary: #FFFFFF;
+            --md-sys-color-tertiary-container: #EADDFF;
+            --md-sys-color-on-tertiary-container: #260058;
+
+            --md-sys-color-surface: #FDF7FA;
+            --md-sys-color-on-surface: #1C1B1E;
+            --md-sys-color-surface-variant: #F3DEE9;
+            
+            --bg-gradient: linear-gradient(135deg, #FFD8E4 0%, #EADDFF 50%, #D3E4FF 100%);
+            
+            --border-radius-large: 28px;
+            --border-radius-medium: 20px;
+            --border-radius-small: 16px;
+            
+            /* 动态方块大小 */
+            --tile-size: 56px;
+            --icon-size: 32px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--md-sys-color-on-surface);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* 顶部信息栏 */
+        .header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .title-group h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: -webkit-linear-gradient(45deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .score-board {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--md-sys-color-secondary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .btn-primary {
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            box-shadow: 0 4px 12px rgba(162, 0, 125, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #8b006a;
+            box-shadow: 0 6px 16px rgba(162, 0, 125, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-tonal {
+            background: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+
+        .btn-tonal:hover {
+            background: #7DE4F5;
+            transform: translateY(-2px);
+        }
+
+        .btn-icon {
+            padding: 12px;
+            border-radius: 50%;
+        }
+
+        /* 游戏主区域 */
+        .game-area {
+            position: relative;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(16px);
+            padding: 24px;
+            border-radius: calc(var(--border-radius-large) + 12px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 6px;
+            position: relative;
+            z-index: 2;
+        }
+
+        canvas {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* 方块样式基础 */
+        .tile {
+            width: var(--tile-size);
+            height: var(--tile-size);
+            border-radius: var(--border-radius-medium);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transform-origin: center;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .tile .material-symbols-rounded {
+            font-size: var(--icon-size);
+            transition: transform 0.2s;
+            z-index: 2;
+        }
+
+        /* 普通图标方块 */
+        .tile.icon {
+            background: #FFFFFF;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .tile.icon:hover:not(.ice):not(.selected) {
+            transform: scale(1.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .tile.selected {
+            background: var(--md-sys-color-primary-container);
+            transform: scale(0.92);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 砖头障碍物 */
+        .tile.brick {
+            background: #9E9E9E;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -4px 8px rgba(0,0,0,0.2);
+            cursor: not-allowed;
+            color: #616161;
+        }
+
+        /* 冰块封锁方块 */
+        .tile.ice {
+            cursor: not-allowed;
+            overflow: hidden;
+        }
+        
+        .tile.ice::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(144, 202, 249, 0.7);
+            backdrop-filter: blur(2px);
+            border: 2px solid #64B5F6;
+            border-radius: inherit;
+            z-index: 3;
+        }
+
+        .tile.ice::before {
+            content: 'ac_unit';
+            font-family: 'Material Symbols Rounded';
+            position: absolute;
+            font-size: calc(var(--icon-size) * 0.8);
+            color: #FFFFFF;
+            z-index: 4;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* 动画状态 */
+        .tile.empty {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        @keyframes pulse-hint {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 237, 0.7); }
+            50% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(255, 215, 237, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 237, 0); }
+        }
+        .tile.hinted {
+            animation: pulse-hint 1s infinite;
+            background: var(--md-sys-color-tertiary-container);
+        }
+
+        @keyframes break-ice {
+            0% { transform: scale(1) rotate(0); filter: brightness(1.5); }
+            20% { transform: scale(1.1) rotate(5deg); }
+            40% { transform: scale(0.9) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0); filter: brightness(1); }
+        }
+        .tile.breaking {
+            animation: break-ice 0.4s ease-out forwards;
+        }
+
+        /* 模态框及设置菜单 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(28, 27, 30, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--md-sys-color-surface);
+            padding: 32px;
+            border-radius: var(--border-radius-large);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+            max-width: 440px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            color: var(--md-sys-color-on-surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 设置项表单 */
+        .setting-group {
+            margin-bottom: 20px;
+            background: var(--md-sys-color-surface-variant);
+            padding: 16px;
+            border-radius: var(--border-radius-medium);
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--md-sys-color-on-surface);
+            font-size: 0.95rem;
+        }
+
+        select.m3-select, input[type="range"].m3-range {
+            width: 100%;
+            background: #FFFFFF;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 12px 16px;
+            border-radius: var(--border-radius-small);
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--md-sys-color-on-surface);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .range-value {
+            font-weight: 700;
+            color: var(--md-sys-color-primary);
+            width: 24px;
+            text-align: center;
+        }
+
+        /* 纯 CSS 切换开关 */
+        .switch-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px; width: 20px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--md-sys-color-primary); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px;
+            }
+            .controls { width: 100%; }
+            .game-area { padding: 12px; }
+            canvas { top: 12px; left: 12px; }
+            button span.text-hide { display: none; }
+        }
+        @media (max-width: 480px) {
+            .tile { border-radius: 12px; }
+            button { padding: 10px 16px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="title-group">
+            <h1>多彩连连看</h1>
+            <div class="score-board">得分: <span id="score">0</span></div>
+        </div>
+        <div class="controls">
+            <button class="btn-tonal btn-icon" onclick="game.openSettings()" title="游戏设置">
+                <span class="material-symbols-rounded">tune</span>
+            </button>
+            <button class="btn-tonal" onclick="game.showHint()">
+                <span class="material-symbols-rounded">lightbulb</span><span class="text-hide">提示</span>
+            </button>
+            <button class="btn-tonal" onclick="game.shuffleManual()">
+                <span class="material-symbols-rounded">shuffle</span><span class="text-hide">洗牌</span>
+            </button>
+            <button class="btn-primary" onclick="game.init()">
+                <span class="material-symbols-rounded">refresh</span>重置
+            </button>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div id="grid" class="grid-container"></div>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div class="modal-overlay" id="winModal">
+        <div class="modal" style="text-align: center;">
+            <span class="material-symbols-rounded" style="font-size: 64px; color: var(--md-sys-color-primary);">social_leaderboard</span>
+            <h2 style="justify-content: center; font-size: 2rem; margin: 16px 0;">恭喜完成！</h2>
+            <p style="margin-bottom: 24px;">最终得分: <strong id="finalScore" style="color: var(--md-sys-color-primary); font-size: 1.2rem;">0</strong></p>
+            <button class="btn-primary" style="margin: 0 auto;" onclick="game.init()">
+                <span class="material-symbols-rounded">play_arrow</span>再来一局
+            </button>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><span class="material-symbols-rounded">sports_esports</span> 玩法设置</h2>
+                <span class="material-symbols-rounded" style="cursor:pointer; opacity:0.6" onclick="game.closeSettings()">close</span>
+            </div>
+            
+            <div class="setting-group">
+                <label class="setting-label">基础难度 (地图大小)</label>
+                <select id="config-difficulty" class="m3-select">
+                    <option value="easy">简单 (4x6)</option>
+                    <option value="medium">中等 (6x8)</option>
+                    <option value="hard" selected>困难 (6x10)</option>
+                    <option value="expert">专家 (8x12)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">重力方向 (消除后方块滑动)</label>
+                <select id="config-gravity" class="m3-select">
+                    <option value="none" selected>无重力 (经典)</option>
+                    <option value="down">向下掉落 ↓</option>
+                    <option value="up">向上漂浮 ↑</option>
+                    <option value="left">向左聚集 ←</option>
+                    <option value="right">向右聚集 →</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">加入不可消除的砖头</label>
+                <div class="range-wrapper">
+                    <input type="range" id="config-bricks" class="m3-range" min="0" max="6" value="0" oninput="document.getElementById('brick-val').textContent=this.value">
+                    <span class="range-value" id="brick-val">0</span>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="switch-wrapper">
+                    <div>
+                        <span class="setting-label" style="margin-bottom:4px;">冰冻封锁方块</span>
+                        <span style="font-size:0.85rem; opacity:0.7;">部分方块被冰冻，需消除其四周方块解锁</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="config-ice">
+                        <span class="slider"></span>
+                    </label>
+                </label>
+            </div>
+
+            <button class="btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="game.applySettings()">
+                <span class="material-symbols-rounded">check</span> 应用并开始新局
+            </button>
+        </div>
+    </div>
+
+<script>
+/**
+ * 连连看核心逻辑
+ */
+class Lianliankan {
+    constructor() {
+        // 难度预设
+        this.levels = {
+            easy: { rows: 4, cols: 6 },
+            medium: { rows: 6, cols: 8 },
+            hard: { rows: 6, cols: 10 },
+            expert: { rows: 8, cols: 12 }
+        };
+        
+        // 玩法配置
+        this.config = {
+            difficulty: 'hard',
+            gravity: 'none', 
+            bricksCount: 0,
+            useIce: false
+        };
+
+        this.board = []; // 存储方块对象
+        this.selected = null;
+        this.score = 0;
+        this.isDrawing = false;
+        
+        // 25种 Material Icons 库
+        this.iconData = [
+            { name: 'favorite', color: '#E91E63' }, { name: 'star', color: '#FFB300' },
+            { name: 'pets', color: '#8D6E63' }, { name: 'wb_sunny', color: '#FF9800' },
+            { name: 'bolt', color: '#00BCD4' }, { name: 'water_drop', color: '#2196F3' },
+            { name: 'local_fire_department', color: '#FF5722' }, { name: 'local_florist', color: '#4CAF50' },
+            { name: 'dark_mode', color: '#5E35B1' }, { name: 'rocket_launch', color: '#9C27B0' },
+            { name: 'flight', color: '#03A9F4' }, { name: 'directions_car', color: '#F44336' },
+            { name: 'sailing', color: '#00897B' }, { name: 'restaurant', color: '#7CB342' },
+            { name: 'sports_esports', color: '#1976D2' }, { name: 'cake', color: '#F06292' },
+            { name: 'eco', color: '#4CAF50' }, { name: 'headphones', color: '#FF9800' },
+            { name: 'icecream', color: '#DCE775' }, { name: 'key', color: '#FFD54F' },
+            { name: 'lock', color: '#B0BEC5' }, { name: 'music_note', color: '#BA68C8' },
+            { name: 'palette', color: '#FF8A65' }, { name: 'shopping_cart', color: '#4DB6AC' },
+            { name: 'umbrella', color: '#4DD0E1' }
+        ];
+
+        this.gridEl = document.getElementById('grid');
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.scoreEl = document.getElementById('score');
+
+        window.addEventListener('resize', () => {
+            this.updateTileSize();
+            this.resizeCanvas();
+        });
+    }
+
+    // --- 设置弹窗相关 ---
+    openSettings() {
+        document.getElementById('settingsModal').classList.add('active');
+    }
+
+    closeSettings() {
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    applySettings() {
+        this.config.difficulty = document.getElementById('config-difficulty').value;
+        this.config.gravity = document.getElementById('config-gravity').value;
+        this.config.bricksCount = parseInt(document.getElementById('config-bricks').value);
+        this.config.useIce = document.getElementById('config-ice').checked;
+        
+        this.closeSettings();
+        this.init();
+    }
+
+    // --- 初始化相关 ---
+    updateTileSize() {
+        const isMobile = window.innerWidth <= 768;
+        const containerPadding = isMobile ? 24 : 48;
+        const maxContainerWidth = 800;
+        const availableWidth = Math.min(window.innerWidth - containerPadding, maxContainerWidth - containerPadding);
+        
+        const cols = this.levels[this.config.difficulty].cols;
+        const totalGaps = (cols + 1) * 6;
+        let tileSize = Math.floor((availableWidth - totalGaps) / (cols + 2));
+        tileSize = Math.min(Math.max(tileSize, 20), 56); 
+        
+        document.documentElement.style.setProperty('--tile-size', `${tileSize}px`);
+        document.documentElement.style.setProperty('--icon-size', `${tileSize * 0.6}px`);
+    }
+
+    createTile(type, iconData = null, isIce = false) {
+        return { type, icon: iconData, isIce };
+    }
+
+    init() {
+        this.score = 0;
+        this.updateScore();
+        this.selected = null;
+        this.isDrawing = false;
+        document.getElementById('winModal').classList.remove('active');
+        
+        const ROWS = this.levels[this.config.difficulty].rows;
+        const COLS = this.levels[this.config.difficulty].cols;
+        this.ROWS = ROWS;
+        this.COLS = COLS;
+
+        this.gridEl.style.gridTemplateRows = `repeat(${ROWS + 2}, 1fr)`;
+        this.gridEl.style.gridTemplateColumns = `repeat(${COLS + 2}, 1fr)`;
+        this.updateTileSize();
+
+        // 1. 生成方块池
+        let pool = [];
+        const totalCells = ROWS * COLS;
+        const bricksToPlace = this.config.bricksCount;
+        const iconCells = totalCells - bricksToPlace;
+        const pairsCount = Math.floor(iconCells / 2);
+
+        // 放砖头
+        for (let i = 0; i < bricksToPlace; i++) {
+            pool.push(this.createTile('brick'));
+        }
+        
+        // 奇数剩余补充一个砖头凑数，以保证图标成对
+        if (iconCells % 2 !== 0) {
+            pool.push(this.createTile('brick')); 
+        }
+
+        // 放图标对
+        let shuffledIcons = [...this.iconData].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < pairsCount; i++) {
+            let icon = shuffledIcons[i % shuffledIcons.length];
+            pool.push(this.createTile('icon', icon), this.createTile('icon', icon));
+        }
+
+        // 冰冻系统：选取 20% 的图标方块进行冰冻
+        if (this.config.useIce) {
+            let iconTiles = pool.filter(t => t.type === 'icon');
+            let iceCount = Math.max(2, Math.floor(iconTiles.length * 0.2));
+            for(let i = 0; i < iceCount && i < iconTiles.length; i++) {
+                iconTiles[i].isIce = true;
+            }
+        }
+
+        // 2. 打乱并填充二维数组
+        pool.sort(() => Math.random() - 0.5);
+        this.board = Array(ROWS + 2).fill(null).map(() => Array(COLS + 2).fill(null));
+        
+        let index = 0;
+        for (let r = 1; r <= ROWS; r++) {
+            for (let c = 1; c <= COLS; c++) {
+                this.board[r][c] = pool[index++];
+            }
+        }
+
+        this.renderBoard();
+        setTimeout(() => this.resizeCanvas(), 0);
+        this.checkSolvable();
+    }
+
+    renderBoard() {
+        this.gridEl.innerHTML = '';
+        for (let r = 0; r < this.ROWS + 2; r++) {
+            for (let c = 0; c < this.COLS + 2; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'tile';
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+
+                const tileData = this.board[r][c];
+
+                if (!tileData || r === 0 || r === this.ROWS + 1 || c === 0 || c === this.COLS + 1) {
+                    cell.classList.add('empty');
+                } else {
+                    if (tileData.type === 'brick') {
+                        cell.classList.add('brick');
+                        const iconEl = document.createElement('span');
+                        iconEl.className = 'material-symbols-rounded';
+                        iconEl.textContent = 'wall_block';
+                        cell.appendChild(iconEl);
+                    } else if (tileData.type === 'icon') {
+                        cell.classList.add('icon');
+                        const iconEl = document.createElement('span');
+                        iconEl.className = 'material-symbols-rounded';
+                        iconEl.textContent = tileData.icon.name;
+                        iconEl.style.color = tileData.icon.color;
+                        cell.appendChild(iconEl);
+                        
+                        if (tileData.isIce) {
+                            cell.classList.add('ice');
+                        } else {
+                            // 只有未冰冻的普通图标才能点击
+                            cell.addEventListener('click', () => this.handleTileClick(r, c));
+                        }
+                    }
+                }
+                this.gridEl.appendChild(cell);
+            }
+        }
+    }
+
+    resizeCanvas() {
+        this.canvas.width = this.gridEl.clientWidth;
+        this.canvas.height = this.gridEl.clientHeight;
+    }
+
+    // --- 核心交互 ---
+    handleTileClick(r, c) {
+        if (this.isDrawing) return;
+        this.clearHints();
+
+        const clickedTile = this.board[r][c];
+        if (!clickedTile || clickedTile.type !== 'icon' || clickedTile.isIce) return;
+
+        const cellEl = this.getCellEl(r, c);
+
+        // 如果没有选中，则选中
+        if (!this.selected) {
+            this.selected = { r, c };
+            cellEl.classList.add('selected');
+            return;
+        }
+
+        const selCellEl = this.getCellEl(this.selected.r, this.selected.c);
+
+        // 点击同一个方块，取消选中
+        if (this.selected.r === r && this.selected.c === c) {
+            selCellEl.classList.remove('selected');
+            this.selected = null;
+            return;
+        }
+
+        const selectedTile = this.board[this.selected.r][this.selected.c];
+
+        // 图标不同，切换选中
+        if (selectedTile.icon.name !== clickedTile.icon.name) {
+            selCellEl.classList.remove('selected');
+            this.selected = { r, c };
+            cellEl.classList.add('selected');
+            return;
+        }
+
+        // 图标相同，检查路径
+        const path = this.getPath(this.selected, { r, c });
+
+        if (path) {
+            this.isDrawing = true;
+            selCellEl.classList.remove('selected');
+            
+            // 播放连接动画
+            this.drawPathAnimation(path, selectedTile.icon.color, () => {
+                // 彻底删除数据前保存坐标
+                const r1 = this.selected.r, c1 = this.selected.c;
+                const r2 = r, c2 = c;
+
+                this.board[r1][c1] = null;
+                this.board[r2][c2] = null;
+                
+                selCellEl.style.transform = 'scale(0)';
+                cellEl.style.transform = 'scale(0)';
+
+                this.score += 10;
+                this.updateScore();
+                
+                // 破冰检测
+                let iceBroken = this.checkIceBreak(r1, c1) || this.checkIceBreak(r2, c2);
+                
+                // 重力检测
+                let moved = this.applyGravity();
+
+                setTimeout(() => {
+                    this.selected = null;
+                    this.isDrawing = false;
+                    
+                    // 如果发生了冰碎或重力位移，重新渲染整个棋盘以同步状态
+                    if (iceBroken || moved) {
+                        this.renderBoard();
+                    } else {
+                        // 否则只是隐藏消除的元素
+                        selCellEl.classList.add('empty');
+                        cellEl.classList.add('empty');
+                        selCellEl.style.transform = '';
+                        cellEl.style.transform = '';
+                    }
+                    this.checkWinOrShuffle();
+                }, 150);
+            });
+        } else {
+            selCellEl.classList.remove('selected');
+            this.selected = { r, c };
+            cellEl.classList.add('selected');
+        }
+    }
+
+    // 破冰逻辑：解锁相邻的冰块
+    checkIceBreak(r, c) {
+        let broken = false;
+        const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+        for (let [dr, dc] of dirs) {
+            let nr = r + dr, nc = c + dc;
+            if (nr >= 1 && nr <= this.ROWS && nc >= 1 && nc <= this.COLS) {
+                let tile = this.board[nr][nc];
+                if (tile && tile.type === 'icon' && tile.isIce) {
+                    tile.isIce = false;
+                    broken = true;
+                    // 给 DOM 加上碎裂特效 class
+                    const el = this.getCellEl(nr, nc);
+                    if(el) el.classList.add('breaking');
+                }
+            }
+        }
+        return broken;
+    }
+
+    // 重力下落逻辑
+    applyGravity() {
+        if (this.config.gravity === 'none') return false;
+        let moved = false;
+        
+        const shiftLine = (lineData) => {
+            let newLine = lineData.filter(t => t !== null);
+            if (newLine.length === lineData.length) return lineData;
+            moved = true;
+            // 补充 null (前补还是后补取决于方向)
+            while(newLine.length < lineData.length) {
+                // down/right 是向后挤压，前面补空; up/left 是向前挤压，后面补空
+                if (this.config.gravity === 'down' || this.config.gravity === 'right') newLine.unshift(null);
+                else newLine.push(null);
+            }
+            return newLine;
+        };
+
+        if (this.config.gravity === 'down' || this.config.gravity === 'up') {
+            for (let c = 1; c <= this.COLS; c++) {
+                let colData = [];
+                for (let r = 1; r <= this.ROWS; r++) colData.push(this.board[r][c]);
+                colData = shiftLine(colData);
+                for (let r = 1; r <= this.ROWS; r++) this.board[r][c] = colData[r-1];
+            }
+        } else {
+            for (let r = 1; r <= this.ROWS; r++) {
+                let rowData = [];
+                for (let c = 1; c <= this.COLS; c++) rowData.push(this.board[r][c]);
+                rowData = shiftLine(rowData);
+                for (let c = 1; c <= this.COLS; c++) this.board[r][c] = rowData[c-1];
+            }
+        }
+        return moved;
+    }
+
+    getCellEl(r, c) {
+        return this.gridEl.children[r * (this.COLS + 2) + c];
+    }
+
+    updateScore() {
+        this.scoreEl.textContent = this.score;
+    }
+
+    // --- 核心路径寻路 ---
+    getPath(p1, p2) {
+        if (p1.r === p2.r && p1.c === p2.c) return null;
+
+        // 检查路径是否畅通（只能穿过 null，不能穿过砖头或冰块）
+        const isClearDirect = (r1, c1, r2, c2) => {
+            if (r1 !== r2 && c1 !== c2) return false;
+            if (r1 === r2) {
+                const min = Math.min(c1, c2), max = Math.max(c1, c2);
+                for (let c = min + 1; c < max; c++) if (this.board[r1][c] !== null) return false;
+            } else {
+                const min = Math.min(r1, r2), max = Math.max(r1, r2);
+                for (let r = min + 1; r < max; r++) if (this.board[r][c1] !== null) return false;
+            }
+            return true;
+        };
+
+        // 0折
+        if (isClearDirect(p1.r, p1.c, p2.r, p2.c)) return [p1, p2];
+
+        // 1折
+        const corner1 = { r: p1.r, c: p2.c };
+        if (this.board[corner1.r][corner1.c] === null && 
+            isClearDirect(p1.r, p1.c, corner1.r, corner1.c) && 
+            isClearDirect(p2.r, p2.c, corner1.r, corner1.c)) return [p1, corner1, p2];
+
+        const corner2 = { r: p2.r, c: p1.c };
+        if (this.board[corner2.r][corner2.c] === null && 
+            isClearDirect(p1.r, p1.c, corner2.r, corner2.c) && 
+            isClearDirect(p2.r, p2.c, corner2.r, corner2.c)) return [p1, corner2, p2];
+
+        // 2折 - 水平中段
+        for (let c = 0; c < this.COLS + 2; c++) {
+            if (c === p1.c || c === p2.c) continue;
+            if (this.board[p1.r][c] === null && this.board[p2.r][c] === null) {
+                if (isClearDirect(p1.r, p1.c, p1.r, c) &&
+                    isClearDirect(p1.r, c, p2.r, c) &&
+                    isClearDirect(p2.r, c, p2.r, p2.c)) {
+                    return [p1, {r: p1.r, c: c}, {r: p2.r, c: c}, p2];
+                }
+            }
+        }
+
+        // 2折 - 垂直中段
+        for (let r = 0; r < this.ROWS + 2; r++) {
+            if (r === p1.r || r === p2.r) continue;
+            if (this.board[r][p1.c] === null && this.board[r][p2.c] === null) {
+                if (isClearDirect(p1.r, p1.c, r, p1.c) &&
+                    isClearDirect(r, p1.c, r, p2.c) &&
+                    isClearDirect(r, p2.c, p2.r, p2.c)) {
+                    return [p1, {r: r, c: p1.c}, {r: r, c: p2.c}, p2];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    drawPathAnimation(path, color, callback) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        const cellW = this.canvas.width / (this.COLS + 2);
+        const cellH = this.canvas.height / (this.ROWS + 2);
+        const getXY = (p) => ({ x: p.c * cellW + cellW / 2, y: p.r * cellH + cellH / 2 });
+
+        this.ctx.beginPath();
+        const start = getXY(path[0]);
+        this.ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < path.length; i++) {
+            const pt = getXY(path[i]);
+            this.ctx.lineTo(pt.x, pt.y);
+        }
+
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = Math.min(cellW, cellH) * 0.15;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowColor = color;
+        this.ctx.stroke();
+
+        setTimeout(() => {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.shadowBlur = 0;
+            callback();
+        }, 300);
+    }
+
+    // --- 死局与洗牌 ---
+    checkWinOrShuffle() {
+        let remainingIcons = 0;
+        for (let r = 1; r <= this.ROWS; r++) {
+            for (let c = 1; c <= this.COLS; c++) {
+                if (this.board[r][c] && this.board[r][c].type === 'icon') remainingIcons++;
+            }
+        }
+
+        if (remainingIcons === 0) {
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('winModal').classList.add('active');
+            return;
+        }
+
+        this.checkSolvable();
+    }
+
+    getAvailableMove() {
+        const remaining = [];
+        for (let r = 1; r <= this.ROWS; r++) {
+            for (let c = 1; c <= this.COLS; c++) {
+                let tile = this.board[r][c];
+                // 只有普通未冰冻图标才能作为解
+                if (tile && tile.type === 'icon' && !tile.isIce) {
+                    remaining.push({r, c, icon: tile.icon});
+                }
+            }
+        }
+
+        for (let i = 0; i < remaining.length; i++) {
+            for (let j = i + 1; j < remaining.length; j++) {
+                if (remaining[i].icon.name === remaining[j].icon.name) {
+                    if (this.getPath(remaining[i], remaining[j])) {
+                        return [remaining[i], remaining[j]];
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    checkSolvable() {
+        if (!this.getAvailableMove()) this.shuffleLogic();
+    }
+
+    shuffleManual() {
+        if (this.isDrawing) return;
+        this.shuffleLogic();
+    }
+
+    shuffleLogic(retryCount = 0) {
+        if (retryCount > 10) return;
+
+        const coords = [];
+        const values = [];
+        
+        // 收集所有在场上的实体（含砖头、冰块）
+        for (let r = 1; r <= this.ROWS; r++) {
+            for (let c = 1; c <= this.COLS; c++) {
+                if (this.board[r][c] !== null) {
+                    coords.push({r, c});
+                    values.push(this.board[r][c]);
+                }
+            }
+        }
+
+        if (values.length === 0) return;
+
+        // **安全机制：洗牌时直接震碎场上剩余的所有冰块，防止冰块死锁**
+        for (let t of values) {
+            if(t.type === 'icon') t.isIce = false;
+        }
+
+        // 打乱并放回
+        for (let i = values.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [values[i], values[j]] = [values[j], values[i]];
+        }
+        for (let i = 0; i < coords.length; i++) {
+            this.board[coords[i].r][coords[i].c] = values[i];
+        }
+
+        this.renderBoard();
+        this.selected = null;
+        this.clearHints();
+
+        // 由于强制解冻了，通常必然有解。如果真的没有，重试。
+        if (!this.getAvailableMove()) {
+            this.shuffleLogic(retryCount + 1);
+        }
+    }
+
+    clearHints() {
+        document.querySelectorAll('.tile.hinted').forEach(el => el.classList.remove('hinted'));
+    }
+
+    showHint() {
+        if (this.isDrawing) return;
+        this.clearHints();
+        
+        const move = this.getAvailableMove();
+        if (move) {
+            this.getCellEl(move[0].r, move[0].c).classList.add('hinted');
+            this.getCellEl(move[1].r, move[1].c).classList.add('hinted');
+            this.score = Math.max(0, this.score - 5);
+            this.updateScore();
+        }
+    }
+}
+
+const game = new Lianliankan();
+window.onload = () => game.init();
+</script>
+</body>
+</html>
